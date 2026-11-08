@@ -42,7 +42,6 @@
         alertList: document.getElementById("alertList"),
         emptyState: document.getElementById("emptyState"),
         emptyKicker: document.getElementById("emptyKicker"),
-        emptyCopy: document.getElementById("emptyCopy"),
         eventLog: document.getElementById("eventLog"),
         announcer: document.getElementById("announcer"),
     };
@@ -667,21 +666,17 @@
 
         let state = "pending";
         let kicker = "Connecting to broker";
-        let copy = `New messages on <span class="topic">${TOPICS.alerts}</span> will appear here.`;
 
         if (brokerState === "connected") {
             state = "connected";
             kicker = "Listening for alerts";
-            copy = `No messages yet. Alerts published to <span class="topic">${TOPICS.alerts}</span> will appear here.`;
         } else if (["error", "offline", "disconnected", "unavailable"].includes(brokerState)) {
             state = "offline";
             kicker = "Broker not connected";
-            copy = "The monitor cannot receive alerts until the connection is restored. Use Reconnect to try again.";
         }
 
         els.emptyState.dataset.state = state;
         els.emptyKicker.textContent = kicker;
-        els.emptyCopy.innerHTML = copy;
     }
 
     function setBrokerState(state) {

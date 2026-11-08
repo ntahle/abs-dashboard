@@ -6,7 +6,7 @@
     <meta name="description" content="Live MQTT alert monitor for the Intelligence Anti-Bully System.">
     <meta name="theme-color" content="#0f172a">
     <title>Anti-Bully System Dashboard</title>
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
 <header class="app-header">
@@ -76,7 +76,6 @@
                     <span id="emptyKicker">Connecting to broker</span>
                 </p>
                 <h3>No alerts yet.</h3>
-                <p id="emptyCopy">New messages on <span class="topic">testtopic/esp32/alert</span> will appear here.</p>
             </div>
         </section>
 
@@ -123,6 +122,6 @@
 
 <!-- MQTT.js, served locally so the monitor does not depend on a CDN. -->
 <script src="mqtt.min.js"></script>
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>
