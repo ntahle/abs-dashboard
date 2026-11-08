@@ -362,29 +362,30 @@ summary:focus-visible,
 .upload-button {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    width: 34px;
     height: 34px;
-    padding: 0 12px;
+    flex: none;
+    padding: 0;
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
     background: var(--surface);
     color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
     cursor: pointer;
     box-shadow: var(--shadow-sm);
-    transition: background-color 120ms ease, border-color 120ms ease;
+    transition: background-color 120ms ease, border-color 120ms ease,
+        color 120ms ease;
 }
 
 .upload-button:hover {
     border-color: #94a3b8;
     background: var(--surface-subtle);
+    color: var(--text);
 }
 
 .upload-button svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.5;

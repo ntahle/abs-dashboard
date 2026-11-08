@@ -6,7 +6,7 @@
     <meta name="description" content="Live MQTT alert monitor for the Intelligence Anti-Bully System.">
     <meta name="theme-color" content="#0f172a">
     <title>Alert Monitor · Intelligence Anti-Bully System</title>
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 <header class="app-header">
@@ -47,11 +47,10 @@
             <div class="page-actions">
                 <input class="visually-hidden" id="csvFileInput" type="file" accept=".csv,text/csv" tabindex="-1">
                 <span class="visually-hidden" id="csvFormatHint">CSV columns: location, transcription, label, confidence, reasons, timestamp, acknowledged.</span>
-                <button class="upload-button" id="uploadCsvButton" type="button" aria-describedby="csvFormatHint" title="Import sample alerts from a CSV. Columns: location, transcription, label, confidence, reasons, timestamp, acknowledged.">
+                <button class="upload-button" id="uploadCsvButton" type="button" aria-label="Upload CSV" aria-describedby="csvFormatHint" title="Import sample alerts from a CSV. Columns: location, transcription, label, confidence, reasons, timestamp, acknowledged.">
                     <svg viewBox="0 0 16 16" aria-hidden="true">
                         <path d="M8 10.5V2.5m0 0L5.2 5.3M8 2.5l2.8 2.8M2.8 10.5v1.7A1.8 1.8 0 0 0 4.6 14h6.8a1.8 1.8 0 0 0 1.8-1.8v-1.7"></path>
                     </svg>
-                    Upload CSV
                 </button>
                 <button class="clear-button" id="clearButton" type="button" hidden>Clear feed</button>
             </div>
