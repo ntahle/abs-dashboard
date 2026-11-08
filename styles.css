@@ -608,20 +608,6 @@ summary:focus-visible,
     font-variant-numeric: tabular-nums;
 }
 
-.alert-origin {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 1px 6px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: var(--surface-muted);
-    color: var(--muted);
-    font-size: 10.5px;
-    font-weight: 600;
-    line-height: 1.5;
-    vertical-align: 1px;
-}
-
 .alert-state {
     display: inline-flex;
     align-items: center;

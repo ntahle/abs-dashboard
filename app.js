@@ -621,7 +621,6 @@
         const ackTime = alert.acknowledgedAt ? formatTime(alert.acknowledgedAt) : "";
         const ackedFromPhone = alert.acknowledgedSource === "phone";
         const ackedLocally = alert.acknowledgedSource === "import";
-        const imported = alert.source === "csv";
 
         const analysis = [];
         if (label) {
@@ -638,7 +637,6 @@
                         <h3 class="alert-location">${escapeHtml(location)}</h3>
                         <p class="alert-time">
                             <time datetime="${escapeHtml(alert.receivedAt)}">${escapeHtml(formatDateTime(alert.receivedAt))}</time>
-                            ${imported ? '<span class="alert-origin">Imported</span>' : ""}
                         </p>
                     </div>
                     <span class="alert-state">${waiting ? "Waiting" : "Acknowledged"}</span>
