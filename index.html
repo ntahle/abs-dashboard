@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Live MQTT alert monitor for the Intelligence Anti-Bully System.">
+    <meta name="theme-color" content="#0f172a">
+    <title>Alert Monitor · Intelligence Anti-Bully System</title>
+    <link rel="stylesheet" href="styles.css?v=5">
+</head>
+<body>
+<header class="app-header">
+    <div class="app-header__inner">
+        <div class="brand">
+            <div class="brand-copy">
+                <p class="brand-name">Intelligence Anti-Bully System</p>
+                <h1>Alert Monitor</h1>
+            </div>
+        </div>
+
+        <div class="status-area">
+            <div class="statuses" aria-label="Connection status" aria-live="polite">
+                <span class="status-chip" id="brokerChip" data-state="connecting">
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="status-label">Broker</span>
+                    <strong id="brokerState">connecting…</strong>
+                </span>
+                <span class="status-chip" id="deviceChip" data-state="unknown">
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="status-label">Device</span>
+                    <strong id="deviceState">unknown</strong>
+                </span>
+            </div>
+            <button class="reconnect-button" id="reconnectButton" type="button" hidden>Reconnect</button>
+        </div>
+    </div>
+</header>
+
+<div class="app-shell">
+    <main class="content">
+        <div class="page-heading">
+            <div>
+                <p class="eyebrow">Live monitoring</p>
+                <h2 id="feedTitle" tabindex="-1">Alerts</h2>
+                <p class="feed-count" id="feedCount" hidden>No alerts received yet</p>
+            </div>
+            <button class="clear-button" id="clearButton" type="button" hidden>Clear feed</button>
+        </div>
+
+        <p class="notice" id="notice" role="status" hidden></p>
+
+        <section class="panel feed-panel" aria-labelledby="feedTitle">
+            <div class="panel-head">
+                <h3 class="panel-title">Incoming alerts</h3>
+                <span class="panel-meta">testtopic/esp32/alert</span>
+            </div>
+
+            <div class="alert-list" id="alertList" aria-label="Received alerts"></div>
+
+            <div class="empty" id="emptyState" data-state="pending">
+                <span class="empty-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 3a6 6 0 0 0-6 6v3.2c0 .9-.3 1.7-.9 2.4L4 16h16l-1.1-1.4c-.6-.7-.9-1.5-.9-2.4V9a6 6 0 0 0-6-6Z"></path>
+                        <path d="M9.5 19a2.5 2.5 0 0 0 5 0"></path>
+                    </svg>
+                </span>
+                <p class="empty-kicker">
+                    <span class="dot" aria-hidden="true"></span>
+                    <span id="emptyKicker">Connecting to broker</span>
+                </p>
+                <h3>No alerts yet.</h3>
+                <p id="emptyCopy">New messages on <span class="topic">testtopic/esp32/alert</span> will appear here.</p>
+            </div>
+        </section>
+
+        <footer class="page-footer">
+            <p class="footer-note">Live data from the MQTT broker. Received alerts are saved in this browser.</p>
+        </footer>
+    </main>
+
+    <aside class="sidebar" aria-label="System information">
+        <section class="panel" aria-labelledby="topicsTitle">
+            <div class="panel-head">
+                <h3 class="panel-title" id="topicsTitle">Subscribed topics</h3>
+            </div>
+            <dl class="topics">
+                <div>
+                    <dt>Alerts</dt>
+                    <dd>testtopic/esp32/alert</dd>
+                </div>
+                <div>
+                    <dt>Device status</dt>
+                    <dd>testtopic/esp32/status</dd>
+                </div>
+                <div>
+                    <dt>Acknowledgement</dt>
+                    <dd>testtopic/acknowledgment</dd>
+                </div>
+                <div>
+                    <dt>Broker</dt>
+                    <dd>z181062f.ala.us-east-1.emqxsl.com:8084</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="panel" aria-labelledby="logTitle">
+            <div class="panel-head">
+                <h3 class="panel-title" id="logTitle">Connection log</h3>
+            </div>
+            <ol class="event-log" id="eventLog"></ol>
+        </section>
+    </aside>
+</div>
+
+<div class="visually-hidden" id="announcer" aria-live="polite" aria-atomic="true"></div>
+
+<!-- MQTT.js, served locally so the monitor does not depend on a CDN. -->
+<script src="mqtt.min.js"></script>
+<script src="app.js?v=6"></script>
+</body>
+</html>
