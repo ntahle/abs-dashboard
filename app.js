@@ -35,6 +35,8 @@
         reconnectButton: document.getElementById("reconnectButton"),
         feedTitle: document.getElementById("feedTitle"),
         feedCount: document.getElementById("feedCount"),
+        uploadCsvButton: document.getElementById("uploadCsvButton"),
+        csvFileInput: document.getElementById("csvFileInput"),
         clearButton: document.getElementById("clearButton"),
         notice: document.getElementById("notice"),
         alertList: document.getElementById("alertList"),
@@ -294,6 +296,7 @@
             acknowledged: Boolean(item.acknowledged),
             acknowledgedAt: item.acknowledgedAt || null,
             acknowledgedSource: item.acknowledged ? String(item.acknowledgedSource || "dashboard") : null,
+            source: item.source === "csv" ? "csv" : "mqtt",
         };
     }
 
@@ -320,6 +323,258 @@
             localStorage.setItem(STORAGE_KEY, JSON.stringify(alerts.slice(0, MAX_ALERTS)));
         } catch (_error) {
             // Storage may be unavailable or full. The live feed still works.
+        }
+    }
+
+    /* ----------------------------------------------------------------------
+       CSV import (sample data)
+       ---------------------------------------------------------------------- */
+
+    const CSV_COLUMN_ALIASES = {
+        receivedAt: ["receivedat", "timestamp", "time", "datetime", "date"],
+        location: ["location", "place", "room", "site"],
+        transcription: ["transcription", "transcript", "text", "message", "speech"],
+        label: ["label", "analysis", "category", "classification"],
+        confidence: ["confidence", "score", "probability"],
+        reasons: ["reasons", "reason", "notes"],
+        acknowledged: ["acknowledged", "ack"],
+        acknowledgedAt: ["acknowledgedat", "acktime", "acknowledgedtime"],
+        acknowledgedSource: ["acknowledgedsource", "acksource"],
+    };
+
+    function normalizeCsvHeader(value) {
+        return String(value || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+    }
+
+    function parseCsv(text) {
+        const input = String(text || "").replace(/^\uFEFF/, "");
+        const rows = [];
+        let row = [];
+        let field = "";
+        let inQuotes = false;
+
+        for (let index = 0; index < input.length; index += 1) {
+            const character = input[index];
+
+            if (inQuotes) {
+                if (character === '"') {
+                    if (input[index + 1] === '"') {
+                        field += '"';
+                        index += 1;
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    field += character;
+                }
+                continue;
+            }
+
+            if (character === '"') {
+                inQuotes = true;
+            } else if (character === ",") {
+                row.push(field);
+                field = "";
+            } else if (character === "\n") {
+                row.push(field);
+                rows.push(row);
+                row = [];
+                field = "";
+            } else if (character === "\r") {
+                if (input[index + 1] !== "\n") {
+                    row.push(field);
+                    rows.push(row);
+                    row = [];
+                    field = "";
+                }
+            } else {
+                field += character;
+            }
+        }
+
+        if (field !== "" || row.length > 0) {
+            row.push(field);
+            rows.push(row);
+        }
+
+        return rows.filter((cells) => cells.some((cell) => String(cell).trim() !== ""));
+    }
+
+    function mapCsvColumns(headerRow) {
+        const position = {};
+
+        headerRow.forEach((value, index) => {
+            const key = normalizeCsvHeader(value);
+            if (key && !(key in position)) {
+                position[key] = index;
+            }
+        });
+
+        const columns = {};
+        Object.keys(CSV_COLUMN_ALIASES).forEach((field) => {
+            columns[field] = CSV_COLUMN_ALIASES[field]
+                .map((alias) => position[alias])
+                .find((index) => typeof index === "number");
+        });
+
+        return columns;
+    }
+
+    function csvCell(row, index) {
+        if (typeof index !== "number") {
+            return "";
+        }
+
+        return String(row[index] ?? "").trim();
+    }
+
+    function parseCsvDate(value, fallback) {
+        const text = String(value || "").trim();
+        if (!text) {
+            return fallback;
+        }
+
+        if (/^\d{10,13}$/.test(text)) {
+            const numeric = Number(text);
+            const date = new Date(text.length === 10 ? numeric * 1000 : numeric);
+            if (!Number.isNaN(date.getTime())) {
+                return date;
+            }
+        }
+
+        const normalized = text.includes(" ") && !text.includes("T")
+            ? text.replace(" ", "T")
+            : text;
+        const date = new Date(normalized);
+        return Number.isNaN(date.getTime()) ? fallback : date;
+    }
+
+    function parseCsvBoolean(value) {
+        return ["true", "yes", "y", "1", "acknowledged"]
+            .includes(String(value || "").trim().toLowerCase());
+    }
+
+    function parseCsvReasons(value) {
+        const text = String(value || "").trim();
+        if (!text) {
+            return [];
+        }
+
+        try {
+            const parsed = JSON.parse(text);
+            if (Array.isArray(parsed)) {
+                return parsed
+                    .filter((item) => item !== null && typeof item !== "undefined")
+                    .map((item) => (typeof item === "object" ? JSON.stringify(item) : String(item)));
+            }
+        } catch (_error) {
+            // Fall through to delimiter parsing.
+        }
+
+        return text.split(/[;|]/).map((item) => item.trim()).filter(Boolean);
+    }
+
+    function readFileText(file) {
+        if (file && typeof file.text === "function") {
+            return file.text();
+        }
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(reader.error || new Error("the file could not be read"));
+            reader.readAsText(file);
+        });
+    }
+
+    function importCsvAlerts(text) {
+        const rows = parseCsv(text);
+        if (rows.length < 2) {
+            throw new Error("the file has no data rows");
+        }
+
+        const columns = mapCsvColumns(rows[0]);
+        const hasRecognisedColumn = Object.values(columns)
+            .some((index) => typeof index === "number");
+
+        if (!hasRecognisedColumn) {
+            throw new Error("no recognised columns. Include headers such as location, transcription, label, confidence, reasons, or timestamp");
+        }
+
+        const importNow = new Date();
+        const imported = [];
+
+        rows.slice(1).forEach((row) => {
+            if (!row.some((cell) => String(cell).trim() !== "")) {
+                return;
+            }
+
+            const acknowledged = parseCsvBoolean(csvCell(row, columns.acknowledged));
+            const receivedAt = parseCsvDate(csvCell(row, columns.receivedAt), importNow);
+            const acknowledgedAt = acknowledged
+                ? parseCsvDate(csvCell(row, columns.acknowledgedAt), receivedAt)
+                : null;
+
+            imported.push({
+                id: makeAlertId(),
+                receivedAt: receivedAt.toISOString(),
+                location: csvCell(row, columns.location),
+                transcription: csvCell(row, columns.transcription),
+                label: csvCell(row, columns.label),
+                confidence: csvCell(row, columns.confidence) || null,
+                reasons: parseCsvReasons(csvCell(row, columns.reasons)),
+                acknowledged,
+                acknowledgedAt: acknowledgedAt ? acknowledgedAt.toISOString() : null,
+                acknowledgedSource: acknowledged
+                    ? (csvCell(row, columns.acknowledgedSource) || "import")
+                    : null,
+                source: "csv",
+            });
+        });
+
+        if (imported.length === 0) {
+            throw new Error("the file has no usable data rows");
+        }
+
+        // Keep live MQTT alerts and replace sample rows from a previous upload
+        // so re-uploading the same demo file does not create duplicates.
+        alerts = [...imported, ...alerts.filter((alert) => alert.source !== "csv")]
+            .sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt))
+            .slice(0, MAX_ALERTS);
+
+        highlightAlertId = imported[0].id;
+        saveAlerts();
+        renderAlerts();
+
+        return imported.length;
+    }
+
+    async function handleCsvFile(event) {
+        const input = event.currentTarget;
+        const file = input.files && input.files[0];
+
+        if (!file) {
+            return;
+        }
+
+        try {
+            if (file.size > 2 * 1024 * 1024) {
+                throw new Error("the file is larger than 2 MB");
+            }
+
+            const text = await readFileText(file);
+            const count = importCsvAlerts(text);
+            const noun = count === 1 ? "alert" : "alerts";
+
+            showNotice(`Imported ${count} sample ${noun} from ${file.name}.`, "ok");
+            logEvent(`Imported ${count} ${noun} from ${file.name}.`);
+            announce(`${count} sample ${noun} imported.`);
+        } catch (error) {
+            const message = error && error.message ? error.message : String(error);
+            showNotice(`Could not import CSV: ${message}`, "error");
+            logEvent(`CSV import failed: ${message}`);
+        } finally {
+            input.value = "";
         }
     }
 
@@ -365,6 +620,8 @@
         const reasons = Array.isArray(alert.reasons) ? alert.reasons.filter(Boolean) : [];
         const ackTime = alert.acknowledgedAt ? formatTime(alert.acknowledgedAt) : "";
         const ackedFromPhone = alert.acknowledgedSource === "phone";
+        const ackedLocally = alert.acknowledgedSource === "import";
+        const imported = alert.source === "csv";
 
         const analysis = [];
         if (label) {
@@ -381,6 +638,7 @@
                         <h3 class="alert-location">${escapeHtml(location)}</h3>
                         <p class="alert-time">
                             <time datetime="${escapeHtml(alert.receivedAt)}">${escapeHtml(formatDateTime(alert.receivedAt))}</time>
+                            ${imported ? '<span class="alert-origin">Imported</span>' : ""}
                         </p>
                     </div>
                     <span class="alert-state">${waiting ? "Waiting" : "Acknowledged"}</span>
@@ -395,7 +653,7 @@
                 <footer class="alert-foot">
                     ${waiting
                         ? `<button class="ack-button" type="button" data-ack="${escapeHtml(alert.id)}" aria-label="Acknowledge alert from ${escapeHtml(location)}"${sending ? " disabled" : ""}>${sending ? "Sending…" : "Acknowledge"}</button>`
-                        : `<p class="ack-line">${ackedFromPhone ? "Acknowledged from phone" : "Ack sent"}${ackTime ? ` at ${escapeHtml(ackTime)}` : ""}</p>`}
+                        : `<p class="ack-line">${ackedFromPhone ? "Acknowledged from phone" : ackedLocally ? "Acknowledged locally" : "Ack sent"}${ackTime ? ` at ${escapeHtml(ackTime)}` : ""}</p>`}
                 </footer>
             </article>
         `;
@@ -477,6 +735,7 @@
             acknowledged: false,
             acknowledgedAt: null,
             acknowledgedSource: null,
+            source: "mqtt",
         };
 
         alerts.unshift(alert);
@@ -722,8 +981,9 @@
         }
 
         // The acknowledgement payload has no alert ID. Treat it as an
-        // acknowledgement of the newest alert that is still waiting.
-        const target = alerts.find((alert) => !alert.acknowledged);
+        // acknowledgement of the newest live alert that is still waiting.
+        // Imported sample alerts are local-only and are never targeted.
+        const target = alerts.find((alert) => !alert.acknowledged && alert.source !== "csv");
 
         if (!target) {
             logEvent("Phone acknowledgement received; no waiting alerts.");
@@ -746,6 +1006,21 @@
     function acknowledgeAlert(alertId) {
         const alert = alerts.find((item) => item.id === alertId);
         if (!alert || alert.acknowledged || ackPending.has(alertId)) {
+            return;
+        }
+
+        // Imported sample alerts are acknowledged locally only, so they never
+        // publish an acknowledgement that could silence a real device.
+        if (alert.source === "csv") {
+            const location = alert.location || DEFAULT_LOCATION;
+            alert.acknowledged = true;
+            alert.acknowledgedAt = new Date().toISOString();
+            alert.acknowledgedSource = "import";
+            saveAlerts();
+            renderAlerts();
+            showNotice("Imported alert acknowledged locally.", "ok");
+            logEvent(`Imported alert from ${location} acknowledged locally.`);
+            announce(`Imported alert from ${location} acknowledged.`);
             return;
         }
 
@@ -855,6 +1130,12 @@
         els.reconnectButton.addEventListener("click", () => {
             connectBroker();
         });
+
+        els.uploadCsvButton.addEventListener("click", () => {
+            els.csvFileInput.click();
+        });
+
+        els.csvFileInput.addEventListener("change", handleCsvFile);
 
         els.clearButton.addEventListener("click", clearFeed);
     }
