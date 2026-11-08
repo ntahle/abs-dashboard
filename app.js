@@ -604,8 +604,8 @@
 
         els.clearButton.hidden = alerts.length === 0;
         document.title = waiting > 0
-            ? `(${waiting}) Anti-Bully Alert Monitor`
-            : "Anti-Bully Alert Monitor";
+            ? `(${waiting}) Anti-Bully System Dashboard`
+            : "Anti-Bully System Dashboard";
 
         updateEmptyState();
     }
