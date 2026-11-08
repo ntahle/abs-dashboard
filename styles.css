@@ -338,7 +338,8 @@ summary:focus-visible,
     flex-wrap: wrap;
 }
 
-.upload-button {
+.upload-button,
+.download-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -356,13 +357,22 @@ summary:focus-visible,
         color 120ms ease;
 }
 
-.upload-button:hover {
+.upload-button:hover,
+.download-button:hover:not(:disabled) {
     border-color: #94a3b8;
     background: var(--surface-subtle);
     color: var(--text);
 }
 
-.upload-button svg {
+.upload-button:disabled,
+.download-button:disabled {
+    color: var(--muted);
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.upload-button svg,
+.download-button svg {
     width: 16px;
     height: 16px;
     fill: none;

@@ -36,6 +36,7 @@
         feedTitle: document.getElementById("feedTitle"),
         feedCount: document.getElementById("feedCount"),
         uploadCsvButton: document.getElementById("uploadCsvButton"),
+        downloadCsvButton: document.getElementById("downloadCsvButton"),
         csvFileInput: document.getElementById("csvFileInput"),
         clearButton: document.getElementById("clearButton"),
         notice: document.getElementById("notice"),
@@ -578,6 +579,76 @@
     }
 
     /* ----------------------------------------------------------------------
+       CSV export
+       ---------------------------------------------------------------------- */
+
+    const CSV_EXPORT_COLUMNS = [
+        "timestamp",
+        "location",
+        "transcription",
+        "label",
+        "confidence",
+        "reasons",
+        "acknowledged",
+        "acknowledgedAt",
+        "acknowledgedSource",
+    ];
+
+    function csvEscape(value) {
+        const text = String(value ?? "");
+        return /[",\r\n]/.test(text)
+            ? `"${text.replace(/"/g, '""')}"`
+            : text;
+    }
+
+    function buildAlertsCsv() {
+        const rows = alerts.map((alert) => [
+            alert.receivedAt,
+            alert.location,
+            alert.transcription,
+            alert.label,
+            formatConfidence(alert.confidence),
+            (alert.reasons || []).join("; "),
+            alert.acknowledged ? "true" : "false",
+            alert.acknowledgedAt || "",
+            alert.acknowledgedSource || "",
+        ]);
+
+        return [CSV_EXPORT_COLUMNS, ...rows]
+            .map((row) => row.map(csvEscape).join(","))
+            .join("\r\n");
+    }
+
+    function downloadCsv() {
+        if (alerts.length === 0) {
+            return;
+        }
+
+        const now = new Date();
+        const pad = (value) => String(value).padStart(2, "0");
+        const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+        // The BOM keeps Excel from misreading non-ASCII text. The importer
+        // strips it, so exported files can be uploaded again as-is.
+        const blob = new Blob(["\uFEFF", buildAlertsCsv()], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = `anti-bully-alerts-${stamp}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        const noun = alerts.length === 1 ? "alert" : "alerts";
+        showNotice(`Downloaded ${alerts.length} ${noun} as CSV.`, "ok");
+        logEvent(`Exported ${alerts.length} ${noun} to CSV.`);
+        announce(`${alerts.length} ${noun} downloaded as CSV.`);
+    }
+
+    /* ----------------------------------------------------------------------
        Rendering
        ---------------------------------------------------------------------- */
 
@@ -602,6 +673,7 @@
         }
 
         els.clearButton.hidden = alerts.length === 0;
+        els.downloadCsvButton.disabled = alerts.length === 0;
         document.title = waiting > 0
             ? `(${waiting}) Anti-Bully System Dashboard`
             : "Anti-Bully System Dashboard";
@@ -1129,6 +1201,8 @@
         });
 
         els.csvFileInput.addEventListener("change", handleCsvFile);
+
+        els.downloadCsvButton.addEventListener("click", downloadCsv);
 
         els.clearButton.addEventListener("click", clearFeed);
     }
