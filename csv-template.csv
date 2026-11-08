@@ -1,0 +1,4 @@
+timestamp,location,transcription,label,confidence,reasons,acknowledged,acknowledgedAt,acknowledgedSource
+2026-11-08T18:51:13+08:00,Fukuyama Dorm DML114,"Stop it, leave me alone! I told you I do not want to talk to you anymore.",Bullying,94%,"Repeated verbal aggression; Threatening tone detected",false,,
+2026-11-08T18:42:07+08:00,Fukuyama Dorm DML114,"Hey, give that back. That is mine and you know it.",Bullying,78%,"Possessive conflict; Raised voice",true,2026-11-08T18:43:02+08:00,import
+2026-11-08T17:29:44+08:00,Library Study Room 2,"You are useless. Nobody wants you here.",Harassment,88%,"Personal insult; Exclusion language",false,,
